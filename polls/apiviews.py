@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework import viewsets
+from django.contrib.auth import authenticate
 
 from .models import Poll, Choice
 from .serializers import *
@@ -43,3 +44,25 @@ class CreateVote(APIView):
 class PollViewset(viewsets.ModelViewSet):
     queryset = Poll.objects.all()
     serializer_class = PollSerializer
+
+class CreateUser(generics.CreateAPIView):
+    # exempt the create user from global authentication settings.(
+    authentication_classes = ()
+    permission_classes = ()
+    serializer_class = UserSerializer
+
+class LoginView(APIView):
+    permission_classes = ()
+
+    def post(self, request,):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        user = authenticate(username = username, password = password)
+
+        if user:
+            if user.is_active:
+                return Response({"token": user.auth_token.key})
+            else:
+                return Response({"error": "User account is disabled."}, status=status.HTTP_403_FORBIDDEN)
+        return Response({"error": "invalid credentials were provided."}, status=status.HTTP_400_BAD_REQUEST)
+    
