@@ -31,18 +31,18 @@ class UserSerializer(serializers.ModelSerializer):
             'write_only':True
         }} # prevent getting the password in api responses.
 
-        def create(self, validated_data):
-            try:
-                user = User(
-                email = validated_data['email'],
-                username = validated_data['username']
-                )
-                user.set_password(validated_data['password']) # ensure the password is hashed correctly.
+    def create(self, validated_data):
+        try:
+            user = User(
+            email = validated_data['email'],
+            username = validated_data['username']
+            )
+            user.set_password(validated_data['password']) # ensure the password is hashed correctly.
 
-                user.save()
-                Token.objects.create(user=user)
-                return user
-            except Exception as e:
-                raise serializers.ValidationError({"error": str(e)})
-            
+            user.save()
+            Token.objects.create(user=user)
+            return user
+        except Exception as e:
+            raise serializers.ValidationError({"error": str(e)})
+
             

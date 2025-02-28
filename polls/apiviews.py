@@ -4,6 +4,8 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from django.contrib.auth import authenticate
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 
 from .models import Poll, Choice
 from .serializers import *
@@ -16,12 +18,22 @@ class PollDetail(generics.RetrieveDestroyAPIView):
     queryset = Poll.objects.all()
     serializer_class = PollSerializer
 
+    
+
 class ChoiceList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         queryset = Choice.objects.filter(poll_id = self.kwargs["pk"])
         return queryset
     serializer_class = ChoiceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        # ensure that users can only create choices for the polls they have created.
+        poll = Poll.objects.get(pk = self.kwargs["pk"])
+        if not request.user == poll.created_by:
+            raise PermissionDenied("You cannot create choices for this poll.")
+        return super().post(request, *args, **kwargs)
 
 class CreateVote(APIView):
     serializer_class = VoteSerializer
@@ -44,6 +56,20 @@ class CreateVote(APIView):
 class PollViewset(viewsets.ModelViewSet):
     queryset = Poll.objects.all()
     serializer_class = PollSerializer
+    permission_classes = [IsAuthenticated]
+    # overide destroy method to only allow users to delete polls they have created.
+
+    def destroy(self, request, *args, **kwargs):
+        print("Accessing the first poll", flush=True)
+        poll = Poll.objects.get(pk=self.kwargs['pk'])
+        
+        print(f"Request user: {request.user}, Poll created by: {poll.created_by}", flush=True)
+
+
+        if not request.user == poll.created_by:
+            raise PermissionDenied("You cannot delete this poll.")
+        return super().destroy(request, *args, **kwargs)
+    
 
 class CreateUser(generics.CreateAPIView):
     # exempt the create user from global authentication settings.(
